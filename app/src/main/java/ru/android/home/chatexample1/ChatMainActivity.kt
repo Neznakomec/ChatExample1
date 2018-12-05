@@ -7,6 +7,11 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.scaledrone.lib.*
 import java.util.*
 import android.view.View
+import android.widget.ListView
+import com.fasterxml.jackson.core.JsonProcessingException
+import com.fasterxml.jackson.databind.ObjectMapper
+
+
 
 
 class ChatMainActivity : AppCompatActivity(), RoomListener {
@@ -16,12 +21,18 @@ class ChatMainActivity : AppCompatActivity(), RoomListener {
     private var editText: EditText? = null
     private lateinit var scaledrone: Scaledrone
 
+    private lateinit var messageAdapter: MessageAdapter
+    private lateinit var messagesView: ListView
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_chat_main)
         // This is where we write the mesage
         editText = findViewById<EditText>(R.id.editText)
         setupScaledrone()
+        messageAdapter = MessageAdapter(this)
+        messagesView = findViewById(R.id.messages_view)
+        messagesView.adapter = messageAdapter
     }
 
     private fun setupScaledrone() {
@@ -61,7 +72,24 @@ class ChatMainActivity : AppCompatActivity(), RoomListener {
 
     // Received a message from Scaledrone room
     override fun onMessage(room: Room, json: JsonNode, member: Member) {
-        // TODO
+        val mapper = ObjectMapper()
+        try {
+            // member.clientData is a MemberData object, let's parse it as such
+            val data = mapper.treeToValue(member.clientData, MemberData::class.java)
+            // if the clientID of the message sender is the same as our's it was sent by us
+            val belongsToCurrentUser = member.id.equals(scaledrone.clientID)
+            // since the message body is a simple string in our case we can use json.asText() to parse it as such
+            // if it was instead an object we could use a similar pattern to data parsing
+            val message = Message(json.asText(), data, belongsToCurrentUser)
+            runOnUiThread {
+                messageAdapter.add(message)
+                // scroll the ListView to the last added element
+                messagesView.setSelection(messagesView.getCount() - 1)
+            }
+        } catch (e: JsonProcessingException) {
+            e.printStackTrace()
+        }
+
     }
 
 
