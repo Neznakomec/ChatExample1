@@ -73,14 +73,19 @@ class ChatMainActivity : AppCompatActivity(), RoomListener {
     // Received a message from Scaledrone room
     override fun onMessage(room: Room, json: JsonNode, member: Member) {
         val mapper = ObjectMapper()
+        var message = Message(json.toString(), MemberData("anonymous","#123456"), false)
         try {
-            // member.clientData is a MemberData object, let's parse it as such
-            val data = mapper.treeToValue(member.clientData, MemberData::class.java)
-            // if the clientID of the message sender is the same as our's it was sent by us
-            val belongsToCurrentUser = member.id.equals(scaledrone.clientID)
-            // since the message body is a simple string in our case we can use json.asText() to parse it as such
-            // if it was instead an object we could use a similar pattern to data parsing
-            val message = Message(json.asText(), data, belongsToCurrentUser)
+            member.clientData?.let {
+                // member.clientData is a MemberData object, let's parse it as such
+                val data = mapper.treeToValue(member.clientData, MemberData::class.java)
+                // if the clientID of the message sender is the same as our's it was sent by us
+                val belongsToCurrentUser = member.id.equals(scaledrone.clientID)
+                // since the message body is a simple string in our case we can use json.asText() to parse it as such
+                // if it was instead an object we could use a similar pattern to data parsing
+
+            message = Message(json.asText(), data, belongsToCurrentUser)
+            }
+
             runOnUiThread {
                 messageAdapter.add(message)
                 // scroll the ListView to the last added element
